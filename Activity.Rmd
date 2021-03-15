@@ -1,0 +1,135 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Using the r package `overlap` following the approach described in Gaynor et al. 2018, Effects of human settlement and roads on diel activity patterns of elephants (Loxodonta africana). African Journal of Ecology 56:872-881.
+
+Set things up:
+
+```{r}
+rm(list = ls()) #clear's R's brain - removes objects from environment
+library(tidyverse)
+#install.packages("overlap")
+library(overlap)
+library(lubridate)
+```
+
+Pull in the data
+
+```{r}
+DF <- read.csv("./Data/Activity.csv")
+
+summary(DF$Hour)
+```
+Now convert hours to radians
+
+```{r}
+DF<- DF %>% mutate(
+   Hours_rad = Hour*2*pi
+)
+
+
+```
+
+Now let's do a density plot!
+```{r}
+#first extract data as vector
+Time <- DF$Hours_rad
+densityPlot(Time)
+```
+Threw an error because of NA's - fix that
+
+```{r}
+Time <- na.omit(Time)
+densityPlot(Time)
+```
+Fix error of numeric vector.
+
+```{r}
+Time <- as.numeric(Time)
+densityPlot(Time)
+```
+R doesn't like how we chunked the time - now divide by 24 to fix radians.
+
+```{r}
+Time<- Time/24
+densityPlot(Time)
+```
+Summarize data set for number of observations
+
+```{r}
+Patterns<-DF %>% group_by(bin) %>% summarize(
+   numObs = length(bin)
+)
+```
+I can see that we have plenty of observations of fishers and porcupines so let's extract them
+
+Extract porcupine and fisher data
+```{r}
+Porcs<-filter(DF, bin == "PORCUPINE")
+Fisher <- filter(DF, bin == "FISHER")
+```
+And now extract the times and make them vectors
+
+```{r}
+PorcT<- Porcs$Hour
+FisherT<-Fisher$Hour
+```
+Now convert to radians
+
+```{r}
+PorcRads <- as.numeric((PorcT/24)*2*pi)
+FisherRads <- as.numeric((FisherT/24)*2*pi)
+
+densityPlot(PorcRads)
+densityPlot(FisherRads)
+```
+
+Create overlap plot
+```{r}
+overlapPlot(PorcRads, FisherRads)
+
+#now a prettier version
+
+MyPlot<-overlapPlot(PorcRads, FisherRads, linet = c(1,1), linec = c("red", "blue"),
+  rug=TRUE, extend="lightgreen", main="Porcupine vs. Fisher activity")
+legend("topleft", c("Porcupine", "Fisher"), lty=1, col=c("red", "blue"), bg="white")
+MyPlot
+```
+Now calcualte d-hat:
+
+```{r}
+overlapEst(PorcRads, FisherRads )
+```
+NOw get confidence intervals:
+
+First do 999 smoothed bootstrap values for the pair of species:
+
+```{r}
+Dhat1<- overlapEst(PorcRads, FisherRads, type = "Dhat1")
+boot <- bootstrap(PorcRads, FisherRads, 999, type = "Dhat1")
+mean(boot)
+hist(boot)
+abline(v=Dhat1, col = "red", lwd = 2)
+abline(v = mean(boot), col = "blue", lwd = 2, lty = 3)
+```
+Now calculate confidence intervals:
+
+```{r}
+#95% CI is default
+bootCI(Dhat1, boot) ['norm0',]
+bootCI(Dhat1, boot) ['basic0',]
+
+#now do a 90% confidence interval
+
+bootCI(Dhat1, boot, conf = 0.9)['norm0',]
+```
+
+
+
+
+
+
+
+

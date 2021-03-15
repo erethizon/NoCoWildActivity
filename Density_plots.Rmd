@@ -1,0 +1,45 @@
+---
+title: "Animal activity"
+output: html_notebook
+---
+
+Using the r package `overlap` following the approach described in Gaynor et al. 2018, Effects of human settlement and roads on diel activity patterns of elephants (Loxodonta africana). African Journal of Ecology 56:872-881.
+
+Set things up:
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+library(overlap)
+library(lubridate)
+```
+
+Pull in some data
+```{r}
+DF<-read.csv("./Data/Activity.csv")
+```
+Convert times to radians as required by package:
+
+```{r}
+DF<-DF %>% mutate(
+  Hour_ratio = Hour/24,
+  Hour_rat_rad = Hour_ratio*2*pi,
+  Hour_rad= Hour*2*pi
+)
+
+summary(DF$Hour_rad)
+summary(DF$Hour_ratio)
+```
+Now extract the times and get rid of na's
+```{r}
+Times<-DF$Hour_rat_rad
+Times<-na.omit(Times)
+Times<-as.numeric(Times)
+```
+
+Now make a density plot
+
+```{r}
+densityPlot(Times)
+```
+
